@@ -1,0 +1,105 @@
+Amazon Best Seller Case Study
+Navjeet Das
+09/02/2022
+
+Case Study on Amazon Best Seller Books using R Program
+
+Installation of usefull packages
+
+install.packages("tidyverse")
+library(tidyverse)
+install.packages("here")
+install.packages("janitor")
+library(here)
+library(janitor)
+installed.packages("ggplot2")
+library(ggplot2)
+library(readr)
+
+
+Reading csv. file for analysis and cleaning coloumn names.
+
+best_seller <- clean_names(read_csv("amazon_best_seller.csv"))
+
+## Rows: 550 Columns: 7
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: ","
+## chr (3): Name, Author, Genre
+## dbl (4): User Rating, Reviews, Price, Year
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+Viewing the data frame to have an overview. This dataset is already cleaned in an excel file before uploading.
+
+
+Viewing the first 6 rows of the dataset.
+
+head(best_seller)
+
+## # A tibble: 6 × 7
+##   name                              author user_rating reviews price  year genre
+##   <chr>                             <chr>        <dbl>   <dbl> <dbl> <dbl> <chr>
+## 1 10-Day Green Smoothie Cleanse     JJ Sm…         4.7   17350     8  2016 Non …
+## 2 11/22/63: A Novel                 Steph…         4.6    2052    22  2011 Fict…
+## 3 12 Rules for Life: An Antidote t… Jorda…         4.7   18979    15  2018 Non …
+## 4 1984 (Signet Classics)            Georg…         4.7   21424     6  2017 Fict…
+## 5 5,000 Awesome Facts (About Every… Natio…         4.8    7665    12  2019 Non …
+## 6 A Dance with Dragons (A Song of … Georg…         4.4   12643    11  2011 Fict…
+Creating summary of the data using metric. The key metric used here is average using the aggregate funtion mean().
+
+
+avg_ratings <- best_seller %>% 
+  group_by(year, genre) %>% 
+  summarize("average_ratings" = mean(user_rating))
+  
+  
+## `summarise()` has grouped output by 'year'. You can override using the `.groups`
+## argument.
+
+
+head(avg_ratings)
+## # A tibble: 6 × 3
+## # Groups:   year [3]
+##    year genre       average_ratings
+##   <dbl> <chr>                 <dbl>
+## 1  2009 Fiction                4.59
+## 2  2009 Non Fiction            4.58
+## 3  2010 Fiction                4.62
+## 4  2010 Non Fiction            4.52
+## 5  2011 Fiction                4.62
+## 6  2011 Non Fiction            4.51
+
+
+Creating data visualization. The package ggplot2 is used to make visualizations.
+
+ggplot(avg_ratings) + geom_point(mapping = aes(x = year, y = average_ratings, color = genre, size = 0.02)) + 
+  geom_line(mapping = aes(x = year, y = average_ratings, color = genre)) + 
+  labs(title = "Average Ratings: Fiction vs. Non Fiction",
+       caption = "Viz created by Navjeet Das", x = "Year", y = "Average Ratings")
+       
+ 
+##Different view: Seprated both Fiction and Non Fiction using facet_wrap() function.
+
+ggplot(avg_ratings) + geom_point(mapping = aes(x = year, y = average_ratings, color = genre, size = 0.01)) + 
+  geom_line(mapping = aes(x = year, y = average_ratings, color = genre)) + 
+  labs(title = "Average Ratings: Fiction vs. Non Fiction",
+       caption = "Viz created by Navjeet Das",
+       x = "Year", y = "Average Ratings")  + 
+  facet_wrap(~genre)
+  
+   
+Bar Graph showing comparision between fiction and non-fiction
+
+ggplot(best_seller) +
+  geom_bar(mapping = aes(x = genre, fill = genre)) + 
+  labs(title = "Popular Genre: Fiction vs. Non Fiction", color = "grey", x = "Genre", y = "Count of Genre")+
+  theme(plot.title = element_text(color = "#7F3D17"), panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+ 
+ 
+ 
+Conclusion:
+•	The data showing the trend of average rating for Fiction and Non-Fiction books is clear
+•	The Fiction book has generate more positive rating compared to the Non-Fiction book
+•	And the bar chart shows that even if the Fiction books has gained more ratings
+•	Non-Fictional books are popular than Fictional books from 2009 to 2019
