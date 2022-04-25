@@ -1,0 +1,236 @@
+
+## Installation and loading of packages. 
+
+```{r Installing & Loading Pacakages}
+
+install.packages("janitor")
+install.packages("lubridate")
+library(tidyverse)
+library(ggplot2)
+library(janitor)
+library(lubridate)
+library(scales)
+
+```
+
+
+
+## Importing Bike Rides datasets of each month for the year 2021
+
+```{r Importing Datasets}
+df1 <- read_csv("Cyclistic/202101-divvy-tripdata.csv")
+df2 <- read_csv("Cyclistic/202102-divvy-tripdata.csv")
+df3 <- read_csv("Cyclistic/202103-divvy-tripdata.csv")
+df4 <- read_csv("Cyclistic/202104-divvy-tripdata.csv")
+df5 <- read_csv("Cyclistic/202105-divvy-tripdata.csv")
+df6 <- read_csv("Cyclistic/202106-divvy-tripdata.csv")
+df7 <- read_csv("Cyclistic/202107-divvy-tripdata.csv")
+df8 <- read_csv("Cyclistic/202108-divvy-tripdata.csv")
+df9 <- read_csv("Cyclistic/202101-divvy-tripdata.csv")
+df10 <- read_csv("Cyclistic/202110-divvy-tripdata.csv")
+df11 <- read_csv("Cyclistic/202111-divvy-tripdata.csv")
+df12 <- read_csv("Cyclistic/202112-divvy-tripdata.csv")
+```
+
+
+## Combining the bike rides datasets of each month
+
+```{r Dataset Union}
+bike_rides <- rbind(df1, df2, df3, df4, df5, df6, df7, df8, df9, df10, df11, df12)
+dim(bike_rides)
+View(bike_rides)
+```
+
+
+## Deleting unecessary Attributes
+
+```{r Deleting unecessary Attributes}
+
+bike_rides <- bike_rides %>% 
+  select(-c(start_lat, start_lng, end_lat, end_lng, start_station_id, end_station_id, end_station_name))
+
+```
+
+
+
+## View attributes of the combined dataset
+
+```{r Viewing Attributes}
+colnames(bike_rides)
+dim(bike_rides)
+head(bike_rides, 6)
+summary(bike_rides)
+```
+
+
+
+## Formating and adding new fields for further aggregations
+
+```{r Formating new columns}
+bike_rides$start_hour <- lubridate::hour(bike_rides$started_at)
+bike_rides$date <- as.Date(bike_rides$started_at)
+bike_rides$month <-  format(as.Date(bike_rides$date), "%B")
+bike_rides$day <-  format(as.Date(bike_rides$date), "%d")
+bike_rides$year <-  format(as.Date(bike_rides$date), "%Y")
+bike_rides$day_of_week <-  format(as.Date(bike_rides$date), "%A")
+bike_rides$time <-  format(bike_rides$started_at, format = "%H:%M")
+bike_rides$time <-  as.POSIXct(bike_rides$time, format = "%H:%M")
+```
+
+
+
+## Converting ride length from seconds to minutes
+
+```{r Converting seconds into minutes}
+bike_rides$ride_length <- (as.double(difftime(bike_rides$ended_at, bike_rides$started_at)))/60
+
+```
+
+
+## Viewing Structure of the dataset
+
+```{r Viewing dataset structure}
+str(bike_rides)
+```
+
+
+## Changing ride_length data to numeric for further analysis
+
+```{r Coverting data format}
+bike_rides$ride_length <- as.numeric(bike_rides$ride_length) #datatype changed to numeric for further analysis
+
+```
+
+
+
+## Deleting invalid rows with 'NAs' and 'negative values'
+
+```{r Deleting invalid rows}
+bike_rides <- bike_rides[!(bike_rides$start_station_name == "HQ QR" | bike_rides$ride_length < 0),]
+
+```
+
+
+
+## Summary of ride_length
+
+```{r Summary of ride_length}
+summary(bike_rides$ride_length)
+```
+
+
+
+## Aggregating and calculating Measures of Central Tendency
+
+```{r Aggregating and calculating Measures of Central Tendency}
+aggregate(bike_rides$ride_length ~ bike_rides$member_casual, FUN = mean)
+aggregate(bike_rides$ride_length ~ bike_rides$member_casual, FUN = median)
+aggregate(bike_rides$ride_length ~ bike_rides$member_casual, FUN = max)
+aggregate(bike_rides$ride_length ~ bike_rides$member_casual, FUN = min)
+```
+
+
+## Ordering the weeks and the months in proper format
+
+```{r Properly Ordering Week Days and Months}
+bike_rides$day_of_week <- ordered(bike_rides$day_of_week, levels = c("Sunday",
+      "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"))
+bike_rides$month <- ordered(bike_rides$month,
+      levels = c("January","February","March","April","May","June","July","August",
+                 "September","October","November","December"))
+```
+
+
+## Summary of rides taken per week
+
+```{r Rides take per Week}
+
+bike_rides %>% 
+  mutate(day_of_week = wday(started_at, label = TRUE)) %>% #creates weekday field using wday()
+  group_by(member_casual, day_of_week) %>% #groups by user type and weekday
+  na.omit() %>% 
+  summarise(number_of_rides = n())
+```
+
+
+
+## Plot 1: Rides per Day of the Week
+
+```{r Plot 1: Rides per Day of the Week}
+
+bike_rides %>% 
+  group_by(member_casual, day_of_week) %>% 
+  summarise(number_of_rides = n()) %>% 
+  arrange(member_casual) %>% 
+  na.omit() %>% 
+  ggplot(aes(x = day_of_week, y = number_of_rides, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  labs(x = 'Day of Week', y = 'Total Number of Rides', title = 'Rides per Day of the Week',
+       fill = 'Type of Membership') +
+  scale_y_continuous(breaks = c(250000, 400000, 550000), 
+                     labels = c("250k", "400k", "550k"))
+```
+
+
+
+## Plot 2: Count of Bike Ride by Hour : from Jan 2021 to Dec 2021
+
+```{r Plot 2: Count of Bike Ride by Hour : from Jan 2021 to Dec 2021}
+
+bike_rides %>%
+  count(start_hour, sort = T) %>%
+  na.omit() %>% 
+  ggplot() + geom_line(aes(x = start_hour, y = n))+
+  scale_y_continuous(labels = comma) +
+  labs(title = "Count of Bike Ride by Hour : from Jan 2021 to Dec 2021",
+       x = "Start Hour of Rides", y = "Number of Rides")
+```
+
+
+## Plot 3: Rides per Month
+
+```{r Plot 3: Rides per Month}
+bike_rides %>% 
+  group_by(member_casual, month) %>% 
+  summarise(total_rides = n(), 'average_duration_(mins)' = mean(ride_length)) %>% 
+  arrange(member_casual) %>% 
+  na.omit() %>% 
+  ggplot(aes(x = month, y = total_rides, fill = member_casual)) + 
+  geom_col(position = 'dodge') +
+  labs(x = "Month", y = "Total Number of Rides", title = "Rides per Month", fill = "Type of Membership") +
+  scale_y_continuous(breaks = c(100000, 200000, 300000, 400000),labels = c("100k", "200k", "300k", "400k")) +
+  theme(axis.text.x = element_text(angle = 45))
+```
+
+
+
+## Plot 4: Type of Bikes used
+
+```{r Plot 4: Type of Bikes used}
+
+bike_rides %>% 
+  na.omit() %>% 
+  ggplot(aes(x = rideable_type, fill = member_casual)) + geom_bar(position = "dodge") +
+  labs(x= 'Type of Bike', y='Number of Rentals', title='Type of Bikes used', fill = 'Type of Membership') +
+  scale_y_continuous(breaks = c(500000, 1000000, 1500000), labels = c("500k", "1 mil", "1.5 mil"))
+
+```
+
+
+
+## Plot 5: Average ride time per week
+
+```{r Plot 5: Average ride time per week}
+bike_rides %>%    #Find the average time spent riding by each membership type per individual day
+  mutate(day_of_week = wday(started_at, label = TRUE)) %>%  
+  group_by(member_casual, day_of_week) %>% 
+  summarise(average_duration = mean(ride_length)) %>% 
+  arrange(member_casual, day_of_week)  %>% 
+  na.omit() %>% 
+  ggplot(aes(x = day_of_week, y = average_duration, fill = member_casual)) +
+  geom_col(position = "dodge") + labs(x='Days of the week', y='Average duration - Mins', 
+                                      title='Average ride time per week', fill='Type of Membership')
+
+
+```
+
